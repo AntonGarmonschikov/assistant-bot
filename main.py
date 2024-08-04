@@ -18,6 +18,49 @@ storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 
 
+class Data:
+
+    def __init__(self, user_message, key):
+        self.user_message = user_message
+        self.key = key
+
+    def add(self):
+        user_data_list = self.user_message.text.split(', ')
+
+        data_dict = open_file()
+
+        for i_element in user_data_list:
+            try:
+                data_dict[self.key].append(i_element.title())
+            except KeyError:
+                data_dict[self.key] = [i_element.title()]
+
+        with open('data.txt', 'w') as file:
+            file.write(str(data_dict))
+
+
+    def delete(self):
+        try:
+            if ',' not in self.user_message.text:
+                user_data_list = self.user_message.text.split(', ')
+            else:
+                user_data_list = self.user_message.text.split(', ')
+
+            data_dict = open_file()
+
+            if len(user_data_list) != len(data_dict[self.key]):
+                for i_element in user_data_list:
+                    data_dict[self.key].remove(i_element.title())
+            else:
+                data_dict.pop(self.key)
+
+            with open('data.txt', 'w') as file:
+                file.write(str(data_dict))
+
+        except ValueError:
+            return 'error'
+
+
 def open_file():
     """
     Функция извлечения словаря из файла
@@ -53,56 +96,6 @@ def message_lists():
     return m_staff_list, m_objects_list
 
 
-def add_data(user_message: types.Message, key: str) -> None:
-    """
-    Функция добавления данных в список
-    :param user_message: сообщение пользователя
-    :param key: ключ словаря к которому привязан соответствующий список
-    :return: None
-    """
-
-    user_data_list = user_message.text.split(', ')
-
-    data_dict = open_file()
-
-    for i_element in user_data_list:
-        try:
-            data_dict[key].append(i_element.title())
-        except KeyError:
-            data_dict[key] = [i_element.title()]
-
-    with open('data.txt', 'w') as file:
-        file.write(str(data_dict))
-
-
-def delete_data(user_message: types.Message, key: str):
-    """
-    Функция удаления данных из списка
-    :param user_message: сообщение пользователя
-    :param key: ключ словаря к которому привязан соответствующий список
-    :return: в случае отсутствия данных в списке, возвращает str
-    """
-    try:
-        if ',' not in user_message.text:
-            user_data_list = user_message.text.split(', ')
-        else:
-            user_data_list = user_message.text.split(', ')
-
-        data_dict = open_file()
-
-        if len(user_data_list) != len(data_dict[key]):
-            for i_element in user_data_list:
-                data_dict[key].remove(i_element.title())
-        else:
-            data_dict.pop(key)
-
-        with open('data.txt', 'w') as file:
-            file.write(str(data_dict))
-
-    except ValueError:
-        return 'error'
-
-
 def get_keyboard(data_dict: dict, key: str) -> list:
     """
     Функция формирования inline-кнопок из списка
@@ -133,7 +126,7 @@ async def process_start_command(message: types.Message):
         ]
         keyboard = types.ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
         await message.answer(
-            f"Здравствуйте, {user_channel_status['user']['first_name']}👋. Меня зовут Маргарита Степановна. Я ваш личный ассистент-бот.",
+            f"Здравствуйте, 👋. Меня зовут Маргарита Степановна. Я ваш личный ассистент-бот.",
             reply_markup=keyboard)
     else:
         await message.answer("Доступ закрыт")
@@ -538,7 +531,8 @@ async def user_data(message: types.Message, state: FSMContext):
             async with state.proxy() as data:
                 key = data['key']
 
-            add_data(message, key)
+            data = Data(message, key)
+            data.add()
 
             await state.finish()
 
@@ -546,7 +540,8 @@ async def user_data(message: types.Message, state: FSMContext):
             async with state.proxy() as data:
                 key = data['key']
 
-            error = delete_data(message, key)
+            data = Data(message, key)
+            error = data.delete()
 
             # контроль ввода
             if error == 'error':
@@ -577,4 +572,3 @@ async def user_data(message: types.Message, state: FSMContext):
 
 if __name__ == "__main__":
     executor.start_polling(dp)
-
